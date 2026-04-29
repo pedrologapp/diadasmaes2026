@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './App.css';
 import { Button } from './components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
@@ -17,10 +17,9 @@ import {
   FileText, 
   Phone, 
   Mail,
-  Bus,
-  Camera,
-  Shield,
   Heart,
+  Gift,
+  IceCream,
   CheckCircle,
   ArrowRight,
   User,
@@ -32,7 +31,9 @@ import {
   XCircle,
   AlertTriangle,
   Search,
-  Filter
+  Filter,
+  Flower2,
+  Cake
 } from 'lucide-react';
 
 // Importando as imagens
@@ -43,6 +44,18 @@ import jardimImage from './assets/happy3.jpg';
 function App() {
   // ⚙️ CONFIGURAÇÃO
   const SERIES_DISPONIVEIS = ['Grupo IV','Grupo V', 'Maternal(3)', 'Maternalzinho(2)', '1º Ano', '2º Ano', '3º Ano', '4º Ano', '5º Ano','6º Ano','7º Ano','8º Ano','9º Ano'];
+
+  // ============================================
+  // VALORES DAS SENHAS
+  // ============================================
+  const PRECO_MAE = 80.0;
+  const PRECO_EXTRA = 40.0;
+
+  // ============================================
+  // DEADLINE - 12/05/2026 00:01 (Horário de Brasília UTC-3)
+  // Em UTC: 12/05/2026 03:01
+  // ============================================
+  const DEADLINE_UTC = new Date('2026-05-12T03:01:00Z');
 
   // ============================================
   // TAXAS DE ANTECIPAÇÃO
@@ -60,6 +73,25 @@ function App() {
     }
   };
 
+  // ============================================
+  // VERIFICAÇÃO DE DEADLINE (HORÁRIO DE BRASÍLIA)
+  // ============================================
+  const [inscricoesEncerradas, setInscricoesEncerradas] = useState(false);
+
+  useEffect(() => {
+    const verificarDeadline = () => {
+      const agoraUTC = new Date();
+      if (agoraUTC >= DEADLINE_UTC) {
+        setInscricoesEncerradas(true);
+      }
+    };
+
+    verificarDeadline();
+    // Reverifica a cada minuto, caso o usuário deixe a página aberta
+    const interval = setInterval(verificarDeadline, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Estados para o formulário
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -73,7 +105,8 @@ function App() {
     phoneConfirm: '',
     paymentMethod: 'pix',
     installments: 1,
-    ticketQuantity: 1
+    senhasMae: 1,        // Quantidade de senhas de Mãe (R$ 80)
+    senhasExtras: 0      // Quantidade de senhas Extras (R$ 40)
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [inscriptionSuccess, setInscriptionSuccess] = useState(false);
@@ -221,16 +254,16 @@ function App() {
   };
 
   // ============================================
-  // CÁLCULO DE PREÇO - R$ 25,00 POR PESSOA
+  // CÁLCULO DE PREÇO
+  // Mãe = R$ 80,00 | Extra = R$ 40,00
   // Até 3x no cartão com juros
   // ============================================
   const calculatePrice = () => {
-    const PRECO_BASE = 25.0;
-    const quantidade = formData.ticketQuantity || 1;
-    let valorBase = PRECO_BASE * quantidade;
+    const totalSenhas = (formData.senhasMae || 0) + (formData.senhasExtras || 0);
+    let valorBase = (formData.senhasMae * PRECO_MAE) + (formData.senhasExtras * PRECO_EXTRA);
     let valorTotal = valorBase;
     
-    if (formData.paymentMethod === 'credit') {
+    if (formData.paymentMethod === 'credit' && valorBase > 0) {
       let taxaPercentual = 0;
       const taxaFixa = 0.49;
       const parcelas = parseInt(formData.installments) || 1;
@@ -247,10 +280,10 @@ function App() {
     }
     
     const valorParcela = valorTotal / (parseInt(formData.installments) || 1);
-    return { valorTotal, valorParcela };
+    return { valorBase, valorTotal, valorParcela, totalSenhas };
   };
 
-  const { valorTotal, valorParcela } = calculatePrice();
+  const { valorBase, valorTotal, valorParcela, totalSenhas } = calculatePrice();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -328,6 +361,11 @@ function App() {
       return false;
     }
 
+    if (totalSenhas === 0) {
+      alert('Por favor, selecione pelo menos uma senha (Mãe ou Extra).');
+      return false;
+    }
+
     const cpfSemMascara = formData.cpf.replace(/[^\d]/g, '');
     if (!cpfSemMascara || cpfSemMascara.length !== 11) {
       alert('Por favor, preencha um CPF válido.');
@@ -353,6 +391,12 @@ function App() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Verificação extra de deadline antes de submeter
+    if (new Date() >= DEADLINE_UTC) {
+      setInscricoesEncerradas(true);
+      return;
+    }
+
     if (!validateForm()) {
       return;
     }
@@ -375,10 +419,12 @@ function App() {
           phone: formData.phone,
           paymentMethod: formData.paymentMethod,
           installments: formData.installments,
-          ticketQuantity: formData.ticketQuantity,
+          senhasMae: formData.senhasMae,
+          senhasExtras: formData.senhasExtras,
+          ticketQuantity: totalSenhas,
           amount: valorTotal,
           timestamp: new Date().toISOString(),
-          event: 'Amadeus-paixaodecristo'
+          event: 'Amadeus-diadasmaes'
         })
       });
 
@@ -410,15 +456,56 @@ function App() {
     }
   };
 
+  // ============================================
+  // TELA DE INSCRIÇÕES ENCERRADAS (após 11/05/2026)
+  // ============================================
+  if (inscricoesEncerradas) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-pink-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md border-pink-200 shadow-xl">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 p-4 bg-pink-100 rounded-full w-fit">
+              <XCircle className="h-12 w-12 text-pink-600" />
+            </div>
+            <CardTitle className="text-2xl text-pink-800">Inscrições Encerradas</CardTitle>
+            <CardDescription className="text-base mt-2">
+              O prazo para inscrições terminou em <strong>11 de maio de 2026</strong>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <div className="p-4 bg-pink-50 rounded-lg border border-pink-200">
+              <Heart className="h-6 w-6 text-pink-500 mx-auto mb-2" />
+              <p className="text-sm text-gray-700">
+                As lembrancinhas foram produzidas antecipadamente e a organização do evento já foi finalizada.
+              </p>
+            </div>
+            <div className="pt-4 border-t border-pink-100">
+              <p className="text-sm font-semibold text-gray-800 mb-2">
+                Para mais informações:
+              </p>
+              <div className="flex items-center justify-center space-x-2 text-pink-700">
+                <Phone className="h-4 w-4" />
+                <span className="font-bold" translate="no">(84) 9 8145-0229</span>
+              </div>
+              <p className="text-xs text-gray-600 mt-2">
+                Secretaria da Escola Amadeus
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (inscriptionSuccess) {
     return (
-      <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-pink-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 p-3 bg-green-100 rounded-full w-fit">
-              <CheckCircle className="h-8 w-8 text-green-600" />
+            <div className="mx-auto mb-4 p-3 bg-pink-100 rounded-full w-fit">
+              <CheckCircle className="h-8 w-8 text-pink-600" />
             </div>
-            <CardTitle className="text-green-600">Inscrição Registrada!</CardTitle>
+            <CardTitle className="text-pink-600">Inscrição Registrada!</CardTitle>
             <CardDescription>Finalize o pagamento para garantir sua vaga</CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-4">
@@ -429,7 +516,7 @@ function App() {
             {paymentUrl && (
               <a
                 href={paymentUrl}
-                className="block w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg text-center text-lg transition-colors"
+                className="block w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-4 px-6 rounded-lg text-center text-lg transition-colors"
                 style={{textDecoration: 'none'}}
               >
                 💳 IR PARA O PAGAMENTO
@@ -460,80 +547,108 @@ function App() {
       <header className="fixed top-0 w-full bg-white/95 backdrop-blur-sm z-50 border-b">
         <nav className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-xl font-bold text-blue-900">Escola Amadeus</h1>
+            <h1 className="text-xl font-bold text-pink-800">Escola Amadeus</h1>
             <div className="hidden md:flex space-x-6">
-              <button onClick={() => scrollToSection('sobre')} className="text-sm hover:text-primary transition-colors">Sobre</button>
-              <button onClick={() => scrollToSection('itinerario')} className="text-sm hover:text-primary transition-colors">Informações</button>
-              <button onClick={() => scrollToSection('custos')} className="text-sm hover:text-primary transition-colors">Custos</button>
-              <button onClick={() => scrollToSection('documentacao')} className="text-sm hover:text-primary transition-colors">Importante</button>
-              <button onClick={() => scrollToSection('contato')} className="text-sm hover:text-primary transition-colors">Contato</button>
+              <button onClick={() => scrollToSection('sobre')} className="text-sm hover:text-pink-600 transition-colors">Sobre</button>
+              <button onClick={() => scrollToSection('itinerario')} className="text-sm hover:text-pink-600 transition-colors">Informações</button>
+              <button onClick={() => scrollToSection('custos')} className="text-sm hover:text-pink-600 transition-colors">Inscrição</button>
+              <button onClick={() => scrollToSection('documentacao')} className="text-sm hover:text-pink-600 transition-colors">Importante</button>
+              <button onClick={() => scrollToSection('contato')} className="text-sm hover:text-pink-600 transition-colors">Contato</button>
             </div>
           </div>
         </nav>
       </header>
 
-      <section className="hero-section min-h-screen flex items-center justify-center text-white relative">
+      {/* HERO - Tom carinhoso/Dia das Mães */}
+      <section className="hero-section min-h-screen flex items-center justify-center text-white relative bg-gradient-to-br from-pink-500 via-rose-500 to-pink-600">
+        <div className="absolute inset-0 bg-black/20"></div>
         <div className="text-center z-10 max-w-4xl mx-auto px-4">
+          <div className="flex justify-center mb-4">
+            <Heart className="h-16 w-16 text-white animate-pulse" fill="white" />
+          </div>
           <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-fade-in">
-            Paixão de Cristo
+            Dia das Mães
           </h1>
-          <p className="text-xl md:text-2xl mb-8 opacity-90">
-            Espetáculo Teatral no Teatro Poti Cavalcanti
+          <p className="text-xl md:text-2xl mb-4 opacity-95 italic">
+            "Uma tarde linda e cheia de carinho para celebrar você"
+          </p>
+          <p className="text-base md:text-lg mb-8 opacity-90">
+            Escola Amadeus — Comemoração especial para nossas mamães
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               size="lg" 
               variant="outline" 
-              className="border-white text-white hover:bg-white hover:text-primary px-8 py-3 bg-white text-primary"
+              className="border-white text-pink-600 hover:bg-pink-50 px-8 py-3 bg-white"
               onClick={() => scrollToSection("sobre")}
             >
               Saiba Mais
             </Button>
+            <Button 
+              size="lg" 
+              className="bg-white text-pink-600 hover:bg-pink-50 px-8 py-3 font-bold"
+              onClick={() => scrollToSection("custos")}
+            >
+              Fazer Inscrição
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
           </div>
-          <div className="mt-12 flex justify-center items-center space-x-8 text-sm">
+          <div className="mt-12 flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 text-sm">
             <div className="flex items-center">
               <Calendar className="h-5 w-5 mr-2" />
-              <span translate="no">19 de Abril de 2026 (Domingo)</span>
+              <span translate="no">16 de Maio de 2026 (Sábado)</span>
+            </div>
+            <div className="flex items-center">
+              <Clock className="h-5 w-5 mr-2" />
+              <span translate="no">15h</span>
             </div>
             <div className="flex items-center">
               <MapPin className="h-5 w-5 mr-2" />
-              Teatro Poti Cavalcanti
+              Novo Auditório
             </div>
           </div>
         </div>
       </section>
 
-      <section id="sobre" className="section-padding bg-white">
+      {/* SOBRE */}
+      <section id="sobre" className="section-padding bg-white py-16 px-4">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4 gradient-text">Sobre o Evento</h2>
-            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-              É com grande alegria que anunciamos a encenação da Paixão de Cristo. Este é sempre um 
-              evento emocionante e significativo para nossa comunidade escolar. O espetáculo acontecerá 
-              no <strong>Teatro Poti Cavalcanti</strong>, em São Gonçalo do Amarante, tornando este momento 
-              ainda mais especial para toda a família Amadeus.
+            <div className="flex justify-center mb-4">
+              <Flower2 className="h-12 w-12 text-pink-500" />
+            </div>
+            <h2 className="text-4xl font-bold mb-4 text-pink-800">Queridas Mamães...</h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+              A Escola Amadeus preparou uma tarde linda e cheia de carinho para celebrar 
+              vocês, que são tão especiais em nossas vidas! Esperamos todas vocês para 
+              comemorarmos juntos o Dia das Mães, em um momento repleto de <strong className="text-pink-600">amor, alegria 
+              e muita emoção</strong> ao lado de seus filhos.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <h3 className="text-2xl font-semibold mb-6">Uma Experiência Única</h3>
+              <h3 className="text-2xl font-semibold mb-6 text-pink-800">Preparamos tudo com muito carinho</h3>
               <div className="space-y-4">
                 <div className="flex items-start space-x-3">
-                  <CheckCircle className="h-6 w-6 text-accent mt-1 flex-shrink-0" />
-                  <p>Encenação da Paixão de Cristo pela nossa comunidade escolar</p>
+                  <Gift className="h-6 w-6 text-pink-500 mt-1 flex-shrink-0" />
+                  <p><strong>6 Lembrancinhas especiais</strong> para as mamães</p>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <CheckCircle className="h-6 w-6 text-accent mt-1 flex-shrink-0" />
-                  <p>Realização no <strong>Teatro Poti Cavalcanti</strong> — R. Alexandre Cavalcante, São Gonçalo do Amarante</p>
+                  <IceCream className="h-6 w-6 text-pink-500 mt-1 flex-shrink-0" />
+                  <p><strong>Sorvetada</strong> deliciosa para refrescar a tarde</p>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <CheckCircle className="h-6 w-6 text-accent mt-1 flex-shrink-0" />
-                  <p>Aluno que irá se apresentar tem entrada gratuita</p>
+                  <Cake className="h-6 w-6 text-pink-500 mt-1 flex-shrink-0" />
+                  <p><strong>Algodão doce, pipoca e churros</strong> — para mães e seus filhos</p>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <CheckCircle className="h-6 w-6 text-accent mt-1 flex-shrink-0" />
-                  <p>A participação da família é fundamental para tornar este momento especial</p>
+                  <Utensils className="h-6 w-6 text-pink-500 mt-1 flex-shrink-0" />
+                  <p>A <strong>cantina</strong> também estará aberta durante o evento</p>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <Heart className="h-6 w-6 text-pink-500 mt-1 flex-shrink-0" fill="currentColor" />
+                  <p>Uma tarde inesquecível, harmoniosa e <strong>cheia de amor</strong>!</p>
                 </div>
               </div>
             </div>
@@ -546,71 +661,73 @@ function App() {
         </div>
       </section>
 
-      <section id="itinerario" className="section-padding bg-muted/30">
+      {/* INFORMAÇÕES DO EVENTO */}
+      <section id="itinerario" className="section-padding bg-pink-50/50 py-16 px-4">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Informações do Evento</h2>
+            <h2 className="text-4xl font-bold mb-4 text-pink-800">Informações do Evento</h2>
             <p className="text-lg text-muted-foreground">
-              Confira todos os detalhes do espetáculo
+              Confira todos os detalhes da nossa comemoração
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="card-hover">
+            <Card className="card-hover border-pink-100">
               <CardHeader className="text-center">
-                <div className="mx-auto mb-4 p-3 bg-primary/10 rounded-full w-fit">
-                  <Clock className="h-8 w-8 text-primary" />
+                <div className="mx-auto mb-4 p-3 bg-pink-100 rounded-full w-fit">
+                  <Calendar className="h-8 w-8 text-pink-600" />
                 </div>
-                <CardTitle>Data e Horário</CardTitle>
-                <CardDescription translate="no">19 de Abril de 2026</CardDescription>
+                <CardTitle>Data</CardTitle>
+                <CardDescription translate="no">16 de Maio de 2026</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-center" translate="no">
-                  Sessões no período da tarde
-                </p>
-                <p className="text-sm text-center font-semibold text-blue-600 mt-2">
-                  O número de sessões dependerá da quantidade de participantes
+                  Sábado
                 </p>
               </CardContent>
             </Card>
-            <Card className="card-hover">
+            <Card className="card-hover border-pink-100">
               <CardHeader className="text-center">
-                <div className="mx-auto mb-4 p-3 bg-accent/10 rounded-full w-fit">
-                  <MapPin className="h-8 w-8 text-accent" />
+                <div className="mx-auto mb-4 p-3 bg-pink-100 rounded-full w-fit">
+                  <Clock className="h-8 w-8 text-pink-600" />
+                </div>
+                <CardTitle>Horário</CardTitle>
+                <CardDescription translate="no">15h</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-center">
+                  Tarde de comemoração
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="card-hover border-pink-100">
+              <CardHeader className="text-center">
+                <div className="mx-auto mb-4 p-3 bg-pink-100 rounded-full w-fit">
+                  <MapPin className="h-8 w-8 text-pink-600" />
                 </div>
                 <CardTitle>Local</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-center">
-                  Teatro Poti Cavalcanti
+                <p className="text-sm text-center font-semibold">
+                  Novo Auditório
                 </p>
                 <p className="text-xs text-center text-muted-foreground mt-1">
-                  R. Alexandre Cavalcante, São Gonçalo do Amarante - RN
+                  Escola Amadeus
                 </p>
               </CardContent>
             </Card>
-            <Card className="card-hover">
+            <Card className="card-hover border-pink-100">
               <CardHeader className="text-center">
-                <div className="mx-auto mb-4 p-3 bg-green-100 rounded-full w-fit">
-                  <FileText className="h-8 w-8 text-green-600" />
+                <div className="mx-auto mb-4 p-3 bg-pink-100 rounded-full w-fit">
+                  <AlertTriangle className="h-8 w-8 text-pink-600" />
                 </div>
-                <CardTitle>Figurino</CardTitle>
+                <CardTitle>Prazo de Inscrição</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-center">
-                  Deve ser providenciado pelo responsável, conforme modelo indicado pelo(a) professor(a)
+                <p className="text-sm text-center font-semibold text-pink-700" translate="no">
+                  Até 11/05/2026
                 </p>
-              </CardContent>
-            </Card>
-            <Card className="card-hover">
-              <CardHeader className="text-center">
-                <div className="mx-auto mb-4 p-3 bg-orange-100 rounded-full w-fit">
-                  <Users className="h-8 w-8 text-orange-600" />
-                </div>
-                <CardTitle>Acompanhamento</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-center">
-                  Todos os estudantes devem estar, obrigatoriamente, acompanhados de um responsável
+                <p className="text-xs text-center text-muted-foreground mt-1">
+                  Após essa data não receberemos pagamentos
                 </p>
               </CardContent>
             </Card>
@@ -618,51 +735,44 @@ function App() {
         </div>
       </section>
 
-      <section id="documentacao" className="section-padding bg-muted/30">
+      {/* IMPORTANTE */}
+      <section id="documentacao" className="section-padding bg-white py-16 px-4">
         <div className="container mx-auto max-w-4xl">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">IMPORTANTE - LEIA</h2>
+            <h2 className="text-4xl font-bold mb-4 text-pink-800">IMPORTANTE - LEIA</h2>
           </div>
 
-          <div className="mt-8 p-6 bg-accent/10 rounded-lg border border-accent/20">
+          <div className="mt-8 p-6 bg-pink-50 rounded-lg border border-pink-200">
             <div className="space-y-4">
               <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-accent rounded-full mt-2 flex-shrink-0"></div>
+                <div className="w-2 h-2 bg-pink-500 rounded-full mt-2 flex-shrink-0"></div>
                 <div>
                   <p className="text-sm">
-                    O espetáculo acontecerá no dia <span translate="no">19/04</span>, no <strong>período da tarde</strong>, no <strong>Teatro Poti Cavalcanti</strong>. O número de sessões será definido conforme a quantidade de participantes confirmados.
+                    A comemoração acontecerá no dia <span translate="no">16/05/2026 (sábado), às 15h</span>, no <strong>Novo Auditório da Escola Amadeus</strong>.
                   </p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-accent rounded-full mt-2 flex-shrink-0"></div>
+                <div className="w-2 h-2 bg-pink-500 rounded-full mt-2 flex-shrink-0"></div>
                 <div>
                   <p className="text-sm">
-                    O <strong>FIGURINO</strong> deve ser providenciado pelo responsável. O modelo deve ser consultado diretamente com o(a) professor(a).
+                    <strong>Filhos(as)</strong> dos alunos da escola são <strong>isentos</strong>, não será cobrada nenhuma taxa para eles participarem ao lado da mãe.
                   </p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-accent rounded-full mt-2 flex-shrink-0"></div>
+                <div className="w-2 h-2 bg-pink-500 rounded-full mt-2 flex-shrink-0"></div>
                 <div>
                   <p className="text-sm">
-                    No dia da apresentação, todos os estudantes devem estar <strong>obrigatoriamente acompanhados de um responsável</strong>.
+                    Os valores arrecadados serão destinados às <strong>despesas da comemoração e dos itens preparados</strong> (lembrancinhas, sorvetada, algodão doce, pipoca, churros e ornamentação).
                   </p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-accent rounded-full mt-2 flex-shrink-0"></div>
+                <div className="w-2 h-2 bg-pink-500 rounded-full mt-2 flex-shrink-0"></div>
                 <div>
                   <p className="text-sm">
-                    O aluno que irá se <strong>apresentar no espetáculo terá entrada gratuita</strong>. Os demais acompanhantes pagam R$ 25,00 por pessoa.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-accent rounded-full mt-2 flex-shrink-0"></div>
-                <div>
-                  <p className="text-sm">
-                    Os valores arrecadados serão destinados ao custeio de <strong>som, ornamentação, aluguel de cadeiras e demais despesas organizacionais</strong>.
+                    A <strong>cantina estará aberta</strong> durante todo o evento.
                   </p>
                 </div>
               </div>
@@ -670,7 +780,7 @@ function App() {
                 <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
                 <div>
                   <p className="text-sm text-red-700 font-semibold">
-                    Fiquem atentos aos nossos canais de comunicação para atualizações sobre ensaios e horários.
+                    ⚠️ ATENÇÃO: O prazo final para pagamento é <span translate="no">11/05/2026</span>. Após essa data <strong>não será possível receber pagamentos</strong>, pois as lembrancinhas estão sendo produzidas antecipadamente.
                   </p>
                 </div>
               </div>  
@@ -679,61 +789,83 @@ function App() {
         </div>
       </section>
 
-      <section id="custos" className="section-padding bg-white">
+      {/* INSCRIÇÃO E PAGAMENTO */}
+      <section id="custos" className="section-padding bg-pink-50/30 py-16 px-4">
         <div className="container mx-auto max-w-4xl">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Inscrição e Pagamento</h2>
+            <h2 className="text-4xl font-bold mb-4 text-pink-800">Inscrição e Pagamento</h2>
             <p className="text-lg text-muted-foreground">
-              Valor por pessoa — aluno que se apresenta tem entrada gratuita
+              Garanta sua vaga até <strong className="text-pink-700" translate="no">11/05/2026</strong>
             </p>
           </div>
 
-          <Card className="mb-8">
+          <Card className="mb-8 border-pink-200">
             <CardHeader className="text-center">
-              <CardTitle className="text-3xl text-primary" translate="no">R$ 25,00</CardTitle>
-              <CardDescription>por PESSOA</CardDescription>
+              <CardTitle className="text-2xl text-pink-700">Tabela de Valores</CardTitle>
+              <CardDescription>Escolha quantas senhas deseja</CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="grid md:grid-cols-3 gap-4 mb-6">
+                <div className="p-4 bg-pink-100 rounded-lg border-2 border-pink-300 text-center">
+                  <Heart className="h-8 w-8 text-pink-600 mx-auto mb-2" fill="currentColor" />
+                  <h4 className="font-bold text-pink-800">Mãe</h4>
+                  <p className="text-2xl font-bold text-pink-700 mt-2" translate="no">R$ 80,00</p>
+                  <p className="text-xs text-pink-600 mt-1">por mãe</p>
+                </div>
+                <div className="p-4 bg-green-50 rounded-lg border-2 border-green-300 text-center">
+                  <Users className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                  <h4 className="font-bold text-green-800">Filhos(as)</h4>
+                  <p className="text-2xl font-bold text-green-700 mt-2">GRÁTIS</p>
+                  <p className="text-xs text-green-600 mt-1">isentos</p>
+                </div>
+                <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-300 text-center">
+                  <UserPlus className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                  <h4 className="font-bold text-blue-800">Senha Extra</h4>
+                  <p className="text-2xl font-bold text-blue-700 mt-2" translate="no">R$ 40,00</p>
+                  <p className="text-xs text-blue-600 mt-1">parentes convidados</p>
+                </div>
+              </div>
+
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <h4 className="font-semibold mb-3 text-accent">Destinação dos valores:</h4>
+                  <h4 className="font-semibold mb-3 text-pink-700">Destinação dos valores:</h4>
                   <ul className="space-y-2 text-sm">
                     <li className="flex items-center">
-                      <CheckCircle className="h-4 w-4 text-accent mr-2" />
-                      Som e equipamentos
+                      <CheckCircle className="h-4 w-4 text-pink-500 mr-2" />
+                      Lembrancinhas para as mamães
                     </li>
                     <li className="flex items-center">
-                      <CheckCircle className="h-4 w-4 text-accent mr-2" />
+                      <CheckCircle className="h-4 w-4 text-pink-500 mr-2" />
+                      Sorvetada, algodão doce, pipoca e churros
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-4 w-4 text-pink-500 mr-2" />
                       Ornamentação do espaço
                     </li>
                     <li className="flex items-center">
-                      <CheckCircle className="h-4 w-4 text-accent mr-2" />
-                      Aluguel de cadeiras
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="h-4 w-4 text-accent mr-2" />
+                      <CheckCircle className="h-4 w-4 text-pink-500 mr-2" />
                       Demais despesas organizacionais
                     </li>
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-3 text-destructive">Informações importantes:</h4>
+                  <h4 className="font-semibold mb-3 text-red-600">Informações importantes:</h4>
                   <ul className="space-y-2 text-sm">
                     <li className="flex items-start">
-                      <Shield className="h-4 w-4 text-destructive mr-2 mt-0.5" />
-                      <span>O aluno que se apresenta tem entrada gratuita</span>
+                      <AlertTriangle className="h-4 w-4 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Prazo final: <strong translate="no">11/05/2026</strong></span>
                     </li>
                     <li className="flex items-start">
-                      <Shield className="h-4 w-4 text-destructive mr-2 mt-0.5" />
-                      Ingressos extras disponíveis pelo mesmo valor (R$ 25,00)
+                      <AlertTriangle className="h-4 w-4 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Filhos(as) da escola são isentos de pagamento</span>
                     </li>
                     <li className="flex items-start">
-                      <Shield className="h-4 w-4 text-destructive mr-2 mt-0.5" />
-                      Parcelamento em até 3x no cartão (com juros)
+                      <AlertTriangle className="h-4 w-4 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Parcelamento em até 3x no cartão (com juros)</span>
                     </li>
                     <li className="flex items-start">
-                      <Shield className="h-4 w-4 text-destructive mr-2 mt-0.5" />
-                      Após o pagamento, não será permitido o reembolso.
+                      <AlertTriangle className="h-4 w-4 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Após o pagamento, não será permitido reembolso</span>
                     </li>
                   </ul>
                 </div>
@@ -745,17 +877,17 @@ function App() {
                 {!showForm ? (
                   <Button 
                     size="lg" 
-                    className="bg-orange-600 hover:bg-orange-700 px-8 py-3"
+                    className="bg-pink-600 hover:bg-pink-700 px-8 py-3 text-white"
                     onClick={showInscricaoForm}
                   >
                     Realizar Inscrição e Pagamento
-                    <ArrowRight className="ml-2 h-5 w-5" />
+                    <Heart className="ml-2 h-5 w-5" fill="currentColor" />
                   </Button>
                 ) : (
                   <Button 
                     size="lg" 
                     variant="outline"
-                    className="px-8 py-3"
+                    className="px-8 py-3 border-pink-300"
                     onClick={() => setShowForm(false)}
                   >
                     <X className="mr-2 h-4 w-4" />
@@ -771,14 +903,14 @@ function App() {
 
           {/* FORMULÁRIO DE INSCRIÇÃO */}
           {showForm && (
-            <Card id="formulario-inscricao" className="border-orange-200 bg-orange-50/30">
+            <Card id="formulario-inscricao" className="border-pink-300 bg-pink-50/30">
               <CardHeader>
-                <CardTitle className="flex items-center text-orange-800">
-                  <User className="mr-2 h-5 w-5" />
+                <CardTitle className="flex items-center text-pink-800">
+                  <Heart className="mr-2 h-5 w-5" fill="currentColor" />
                   Formulário de Inscrição
                 </CardTitle>
                 <CardDescription>
-                  Preencha todos os dados para garantir a participação do aluno
+                  Preencha todos os dados para garantir sua participação
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -788,7 +920,7 @@ function App() {
                   <div>
                     <h3 className="text-lg font-semibold mb-4 flex items-center">
                       <Search className="mr-2 h-5 w-5" />
-                      Buscar Aluno
+                      Buscar Aluno (Filho/Filha)
                     </h3>
                     
                     <div className="space-y-4">
@@ -808,7 +940,7 @@ function App() {
                         
                         {isSearching && (
                           <div className="absolute right-3 top-9">
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-pink-600"></div>
                           </div>
                         )}
                         
@@ -841,7 +973,7 @@ function App() {
                               <div
                                 key={student.id}
                                 onClick={() => selectStudent(student)}
-                                className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+                                className="p-3 hover:bg-pink-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
                               >
                                 <div className="font-medium text-sm">{student.nome_completo}</div>
                                 <div className="text-xs text-gray-600 mt-1">
@@ -915,11 +1047,9 @@ function App() {
                         />
                       </div>
 
-                      {/* ================================================ */}
-                      {/* TELEFONE COM CONFIRMAÇÃO                          */}
-                      {/* ================================================ */}
-                      <div className="p-4 rounded-lg border-2 border-blue-200 bg-blue-50 space-y-3">
-                        <p className="text-sm font-semibold text-blue-800 flex items-center">
+                      {/* TELEFONE COM CONFIRMAÇÃO */}
+                      <div className="p-4 rounded-lg border-2 border-pink-200 bg-pink-50 space-y-3">
+                        <p className="text-sm font-semibold text-pink-800 flex items-center">
                           <Phone className="h-4 w-4 mr-2 flex-shrink-0" />
                           📲 O QR Code do ingresso será enviado para este WhatsApp — digite com atenção!
                         </p>
@@ -1023,45 +1153,102 @@ function App() {
                     </div>
                   </div>
 
-                  {/* Quantidade de Senhas */}
+                  {/* QUANTIDADE DE SENHAS - DUAS CATEGORIAS */}
                   <div>
                     <h3 className="text-lg font-semibold mb-1 flex items-center">
                       <Users className="mr-2 h-5 w-5" />
-                      Quantidade de Senhas (Espectadores)
+                      Quantidade de Senhas
                     </h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      O aluno que se apresenta <strong>não precisa de senha</strong>. Adquira senhas apenas para quem irá <strong>assistir</strong> ao espetáculo (R$ 25,00 por pessoa).
+                      Selecione quantas senhas deseja adquirir. <strong>Filhos(as) da escola não pagam</strong>.
                     </p>
 
-                    <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-lg p-4">
-                      <div>
-                        <p className="font-medium text-sm">Senhas para assistir</p>
-                        <p className="text-xs text-muted-foreground">R$ 25,00 por pessoa</p>
+                    {/* SENHA DE MÃE */}
+                    <div className="flex items-center justify-between bg-pink-50 border-2 border-pink-300 rounded-lg p-4 mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-pink-200 rounded-full">
+                          <Heart className="h-5 w-5 text-pink-700" fill="currentColor" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm text-pink-800">Senha de Mãe</p>
+                          <p className="text-xs text-pink-700" translate="no">R$ 80,00 por mãe</p>
+                        </div>
                       </div>
                       <div className="flex items-center space-x-3">
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="h-8 w-8 p-0 rounded-full border-orange-400 text-orange-600 hover:bg-orange-100"
-                          onClick={() => setFormData(prev => ({ ...prev, ticketQuantity: Math.max(1, prev.ticketQuantity - 1), installments: 1 }))}
-                          disabled={formData.ticketQuantity <= 1}
+                          className="h-8 w-8 p-0 rounded-full border-pink-400 text-pink-600 hover:bg-pink-100"
+                          onClick={() => setFormData(prev => ({ ...prev, senhasMae: Math.max(0, prev.senhasMae - 1), installments: 1 }))}
+                          disabled={formData.senhasMae <= 0}
                         >
                           <Minus className="h-4 w-4" />
                         </Button>
-                        <span className="text-xl font-bold w-8 text-center text-orange-800">
-                          {formData.ticketQuantity}
+                        <span className="text-xl font-bold w-8 text-center text-pink-800">
+                          {formData.senhasMae}
                         </span>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="h-8 w-8 p-0 rounded-full border-orange-400 text-orange-600 hover:bg-orange-100"
-                          onClick={() => setFormData(prev => ({ ...prev, ticketQuantity: prev.ticketQuantity + 1, installments: 1 }))}
+                          className="h-8 w-8 p-0 rounded-full border-pink-400 text-pink-600 hover:bg-pink-100"
+                          onClick={() => setFormData(prev => ({ ...prev, senhasMae: prev.senhasMae + 1, installments: 1 }))}
                         >
                           <Plus className="h-4 w-4" />
                         </Button>
                       </div>
+                    </div>
+
+                    {/* SENHA EXTRA */}
+                    <div className="flex items-center justify-between bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-blue-200 rounded-full">
+                          <UserPlus className="h-5 w-5 text-blue-700" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm text-blue-800">Senha Extra</p>
+                          <p className="text-xs text-blue-700" translate="no">R$ 40,00 por parente convidado</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 w-8 p-0 rounded-full border-blue-400 text-blue-600 hover:bg-blue-100"
+                          onClick={() => setFormData(prev => ({ ...prev, senhasExtras: Math.max(0, prev.senhasExtras - 1), installments: 1 }))}
+                          disabled={formData.senhasExtras <= 0}
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <span className="text-xl font-bold w-8 text-center text-blue-800">
+                          {formData.senhasExtras}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 w-8 p-0 rounded-full border-blue-400 text-blue-600 hover:bg-blue-100"
+                          onClick={() => setFormData(prev => ({ ...prev, senhasExtras: prev.senhasExtras + 1, installments: 1 }))}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {totalSenhas === 0 && (
+                      <p className="text-xs text-red-600 mt-2 flex items-center">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        Selecione pelo menos uma senha para continuar
+                      </p>
+                    )}
+
+                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start">
+                      <CheckCircle className="h-4 w-4 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-green-800">
+                        <strong>Lembrete:</strong> Filhos(as) dos alunos da escola são <strong>isentos</strong> e não precisam de senha.
+                      </p>
                     </div>
                   </div>
 
@@ -1073,23 +1260,23 @@ function App() {
                       <div 
                         className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                           formData.paymentMethod === 'pix' 
-                            ? 'border-orange-400 bg-orange-50' 
+                            ? 'border-pink-400 bg-pink-50' 
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                         onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'pix', installments: 1 }))}
                       >
                         <div className="flex items-center">
                           <div className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                            formData.paymentMethod === 'pix' ? 'border-orange-400 bg-orange-400' : 'border-gray-300'
+                            formData.paymentMethod === 'pix' ? 'border-pink-400 bg-pink-400' : 'border-gray-300'
                           }`}>
                             {formData.paymentMethod === 'pix' && (
-                              <div className="w-full h-full rounded-full bg-orange-400"></div>
+                              <div className="w-full h-full rounded-full bg-pink-400"></div>
                             )}
                           </div>
                           <div className="flex items-center space-x-2">
                             <span className="text-lg font-bold">PIX</span>
                             <span className="text-sm" translate="no">
-                              R$ {(25 * formData.ticketQuantity).toFixed(2).replace('.', ',')} (sem taxas)
+                              R$ {valorBase.toFixed(2).replace('.', ',')} (sem taxas)
                             </span>
                           </div>
                         </div>
@@ -1098,17 +1285,17 @@ function App() {
                       <div 
                         className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                           formData.paymentMethod === 'credit' 
-                            ? 'border-orange-400 bg-orange-50' 
+                            ? 'border-pink-400 bg-pink-50' 
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                         onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'credit' }))}
                       >
                         <div className="flex items-center">
                           <div className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                            formData.paymentMethod === 'credit' ? 'border-orange-400 bg-orange-400' : 'border-gray-300'
+                            formData.paymentMethod === 'credit' ? 'border-pink-400 bg-pink-400' : 'border-gray-300'
                           }`}>
                             {formData.paymentMethod === 'credit' && (
-                              <div className="w-full h-full rounded-full bg-orange-400"></div>
+                              <div className="w-full h-full rounded-full bg-pink-400"></div>
                             )}
                           </div>
                           <div>
@@ -1124,7 +1311,7 @@ function App() {
                       </div>
                     </div>
 
-                    {formData.paymentMethod === 'credit' && (
+                    {formData.paymentMethod === 'credit' && totalSenhas > 0 && (
                       <div className="mb-6">
                         <Label className="text-sm font-medium">Número de Parcelas</Label>
                         <select
@@ -1143,29 +1330,40 @@ function App() {
                     )}
 
                     {/* Valor Total */}
-                    <div className="bg-orange-100 p-4 rounded-lg border border-orange-200">
+                    <div className="bg-pink-100 p-4 rounded-lg border border-pink-200">
                       <div className="text-center" translate="no">
-                        <h4 className="text-lg font-bold text-orange-800 mb-1">Valor Total</h4>
-                        <div className="text-sm text-gray-600 mb-1">
-                          {formData.ticketQuantity} {formData.ticketQuantity === 1 ? 'senha' : 'senhas'} × R$ 25,00
-                          {formData.paymentMethod === 'credit' && ' + taxas do cartão'}
+                        <h4 className="text-lg font-bold text-pink-800 mb-1">Valor Total</h4>
+                        <div className="text-sm text-gray-700 mb-1 space-y-1">
+                          {formData.senhasMae > 0 && (
+                            <div>
+                              {formData.senhasMae} {formData.senhasMae === 1 ? 'Senha de Mãe' : 'Senhas de Mãe'} × R$ 80,00
+                            </div>
+                          )}
+                          {formData.senhasExtras > 0 && (
+                            <div>
+                              {formData.senhasExtras} {formData.senhasExtras === 1 ? 'Senha Extra' : 'Senhas Extras'} × R$ 40,00
+                            </div>
+                          )}
+                          {formData.paymentMethod === 'credit' && totalSenhas > 0 && (
+                            <div className="text-xs">+ taxas do cartão</div>
+                          )}
                         </div>
-                        <div className="text-2xl font-bold text-orange-900">
+                        <div className="text-3xl font-bold text-pink-900 mt-2">
                           R$ {valorTotal.toFixed(2).replace('.', ',')}
                         </div>
                         {formData.paymentMethod === 'credit' && formData.installments > 1 && (
-                          <div className="text-sm text-orange-700 mt-1">
+                          <div className="text-sm text-pink-700 mt-1">
                             {formData.installments}x de R$ {valorParcela.toFixed(2).replace('.', ',')}
                           </div>
                         )}
                         {formData.paymentMethod === 'credit' && (
-                          <div className="text-xs text-orange-600 mt-1">
+                          <div className="text-xs text-pink-600 mt-1">
                             (inclui taxas do cartão)
                           </div>
                         )}
-                        <div className="mt-2 pt-2 border-t border-orange-300 text-xs text-orange-700 flex items-center justify-center">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Aluno que se apresenta: entrada gratuita (não incluído)
+                        <div className="mt-2 pt-2 border-t border-pink-300 text-xs text-pink-700 flex items-center justify-center">
+                          <Heart className="h-3 w-3 mr-1" fill="currentColor" />
+                          Filhos(as) da escola: entrada gratuita
                         </div>
                       </div>
                     </div>
@@ -1174,8 +1372,8 @@ function App() {
                   {/* Botão de Envio */}
                   <Button 
                     type="submit" 
-                    className="w-full bg-orange-600 hover:bg-orange-700 text-white py-6 text-lg font-bold"
-                    disabled={isProcessing || !selectedStudent || !phoneValid}
+                    className="w-full bg-pink-600 hover:bg-pink-700 text-white py-6 text-lg font-bold"
+                    disabled={isProcessing || !selectedStudent || !phoneValid || totalSenhas === 0}
                   >
                     {isProcessing ? (
                       <>
@@ -1183,13 +1381,22 @@ function App() {
                         Processando Inscrição...
                       </>
                     ) : (
-                      'CONTINUAR PARA PAGAMENTO'
+                      <>
+                        <Heart className="mr-2 h-5 w-5" fill="currentColor" />
+                        CONTINUAR PARA PAGAMENTO
+                      </>
                     )}
                   </Button>
 
                   {!phoneValid && formData.phone && (
                     <p className="text-xs text-center text-red-500">
                       ⚠️ Confirme o WhatsApp corretamente para habilitar o botão
+                    </p>
+                  )}
+
+                  {totalSenhas === 0 && (
+                    <p className="text-xs text-center text-red-500">
+                      ⚠️ Selecione pelo menos uma senha (Mãe ou Extra)
                     </p>
                   )}
 
@@ -1203,20 +1410,21 @@ function App() {
         </div>
       </section>
 
-      <section id="contato" className="section-padding bg-muted/30">
+      {/* CONTATO */}
+      <section id="contato" className="section-padding bg-pink-50/50 py-16 px-4">
         <div className="container mx-auto max-w-4xl">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Entre em Contato</h2>
+            <h2 className="text-4xl font-bold mb-4 text-pink-800">Entre em Contato</h2>
             <p className="text-lg text-muted-foreground">
               Tire suas dúvidas conosco
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
-            <Card className="card-hover">
+          <div className="grid md:grid-cols-1 gap-8 max-w-md mx-auto">
+            <Card className="card-hover border-pink-100">
               <CardHeader>
                 <div className="flex items-center space-x-3">
-                  <Phone className="h-8 w-8 text-primary" />
+                  <Phone className="h-8 w-8 text-pink-600" />
                   <div>
                     <CardTitle>Telefone</CardTitle>
                     <CardDescription>Secretaria da escola</CardDescription>
@@ -1236,17 +1444,21 @@ function App() {
               <strong>Coordenação Pedagógica</strong><br />
               Escola Centro Educacional Amadeus - São Gonçalo do Amarante, RN
             </p>
+            <p className="text-sm text-pink-700 mt-4 italic">
+              Com carinho, Escola Amadeus 💕
+            </p>
           </div>
         </div>
       </section>
 
-      <footer className="bg-blue-900 text-white py-8">
+      <footer className="bg-pink-800 text-white py-8">
         <div className="container mx-auto px-4 text-center">
+          <Heart className="h-6 w-6 mx-auto mb-2 text-pink-200" fill="currentColor" />
           <p className="text-sm">
             © 2026 Escola Centro Educacional Amadeus. Todos os direitos reservados.
           </p>
           <p className="text-xs mt-2 opacity-80" translate="no">
-            Paixão de Cristo - Teatro Poti Cavalcanti - 19 de Abril de 2026
+            Comemoração do Dia das Mães - 16 de Maio de 2026 - Novo Auditório
           </p>
         </div>
       </footer>
