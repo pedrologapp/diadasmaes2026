@@ -36,11 +36,6 @@ import {
   Cake
 } from 'lucide-react';
 
-// Importando as imagens
-import interiorImage1 from './assets/happy1.jpg';
-import interiorImage2 from './assets/happy2.jpg';
-import jardimImage from './assets/happy3.jpg';
-
 function App() {
   // ⚙️ CONFIGURAÇÃO
   const SERIES_DISPONIVEIS = ['Grupo IV','Grupo V', 'Maternal(3)', 'Maternalzinho(2)', '1º Ano', '2º Ano', '3º Ano', '4º Ano', '5º Ano','6º Ano','7º Ano','8º Ano','9º Ano'];
@@ -626,36 +621,29 @@ function App() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h3 className="text-2xl font-semibold mb-6 text-pink-800">Preparamos tudo com muito carinho</h3>
-              <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <Gift className="h-6 w-6 text-pink-500 mt-1 flex-shrink-0" />
-                  <p><strong>6 Lembrancinhas especiais</strong> para as mamães</p>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <IceCream className="h-6 w-6 text-pink-500 mt-1 flex-shrink-0" />
-                  <p><strong>Sorvetada</strong> deliciosa para refrescar a tarde</p>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <Cake className="h-6 w-6 text-pink-500 mt-1 flex-shrink-0" />
-                  <p><strong>Algodão doce, pipoca e churros</strong> — para mães e seus filhos</p>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <Utensils className="h-6 w-6 text-pink-500 mt-1 flex-shrink-0" />
-                  <p>A <strong>cantina</strong> também estará aberta durante o evento</p>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <Heart className="h-6 w-6 text-pink-500 mt-1 flex-shrink-0" fill="currentColor" />
-                  <p>Uma tarde inesquecível, harmoniosa e <strong>cheia de amor</strong>!</p>
-                </div>
+          <div className="max-w-3xl mx-auto">
+            <h3 className="text-2xl font-semibold mb-8 text-pink-800 text-center">Preparamos tudo com muito carinho</h3>
+            <div className="grid md:grid-cols-2 gap-5">
+              <div className="flex items-start space-x-3 p-5 bg-pink-50 rounded-lg border border-pink-100">
+                <Gift className="h-6 w-6 text-pink-500 mt-1 flex-shrink-0" />
+                <p><strong>6 Lembrancinhas especiais</strong> para as mamães</p>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <img src={interiorImage1} alt="Evento escolar" className="rounded-lg shadow-lg h-48 w-full object-cover" />         
-              <img src={interiorImage2} alt="Atividade cultural" className="rounded-lg shadow-lg h-48 w-full object-cover" />    
-              <img src={jardimImage} alt="Espetáculo escolar" className="rounded-lg shadow-lg col-span-2 h-64 w-full object-cover" />
+              <div className="flex items-start space-x-3 p-5 bg-pink-50 rounded-lg border border-pink-100">
+                <IceCream className="h-6 w-6 text-pink-500 mt-1 flex-shrink-0" />
+                <p><strong>Sorvetada</strong> deliciosa para refrescar a tarde</p>
+              </div>
+              <div className="flex items-start space-x-3 p-5 bg-pink-50 rounded-lg border border-pink-100">
+                <Cake className="h-6 w-6 text-pink-500 mt-1 flex-shrink-0" />
+                <p><strong>Algodão doce, pipoca e churros</strong> — para mães e seus filhos</p>
+              </div>
+              <div className="flex items-start space-x-3 p-5 bg-pink-50 rounded-lg border border-pink-100">
+                <Utensils className="h-6 w-6 text-pink-500 mt-1 flex-shrink-0" />
+                <p>A <strong>cantina</strong> também estará aberta durante o evento</p>
+              </div>
+              <div className="flex items-start space-x-3 p-5 bg-pink-50 rounded-lg border border-pink-100 md:col-span-2">
+                <Heart className="h-6 w-6 text-pink-500 mt-1 flex-shrink-0" fill="currentColor" />
+                <p>Uma tarde inesquecível, harmoniosa e <strong>cheia de amor</strong>!</p>
+              </div>
             </div>
           </div>
         </div>
