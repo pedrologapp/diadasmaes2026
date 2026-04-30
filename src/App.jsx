@@ -626,7 +626,7 @@ function App() {
             <div className="grid md:grid-cols-2 gap-5">
               <div className="flex items-start space-x-3 p-5 bg-pink-50 rounded-lg border border-pink-100">
                 <Gift className="h-6 w-6 text-pink-500 mt-1 flex-shrink-0" />
-                <p><strong>6 Lembrancinhas especiais</strong> para as mamães</p>
+                <p><strong>7 Lembrancinhas especiais</strong> para as mamães</p>
               </div>
               <div className="flex items-start space-x-3 p-5 bg-pink-50 rounded-lg border border-pink-100">
                 <IceCream className="h-6 w-6 text-pink-500 mt-1 flex-shrink-0" />
