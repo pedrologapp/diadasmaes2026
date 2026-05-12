@@ -47,10 +47,9 @@ function App() {
   const PRECO_EXTRA = 40.0;
 
   // ============================================
-  // DEADLINE - 12/05/2026 00:01 (Horário de Brasília UTC-3)
-  // Em UTC: 12/05/2026 03:01
+  // DEADLINE - DESATIVADO (sistema reaberto)
   // ============================================
-  const DEADLINE_UTC = new Date('2026-05-12T03:01:00Z');
+  // const DEADLINE_UTC = new Date('2026-05-12T03:01:00Z');
 
   // ============================================
   // TAXAS DE ANTECIPAÇÃO
@@ -69,23 +68,12 @@ function App() {
   };
 
   // ============================================
-  // VERIFICAÇÃO DE DEADLINE (HORÁRIO DE BRASÍLIA)
+  // VERIFICAÇÃO DE DEADLINE - DESATIVADA
+  // Sistema reaberto: a trava de deadline foi removida.
   // ============================================
   const [inscricoesEncerradas, setInscricoesEncerradas] = useState(false);
 
-  useEffect(() => {
-    const verificarDeadline = () => {
-      const agoraUTC = new Date();
-      if (agoraUTC >= DEADLINE_UTC) {
-        setInscricoesEncerradas(true);
-      }
-    };
-
-    verificarDeadline();
-    // Reverifica a cada minuto, caso o usuário deixe a página aberta
-    const interval = setInterval(verificarDeadline, 60000);
-    return () => clearInterval(interval);
-  }, []);
+  // useEffect de verificação de deadline foi removido para reabrir o sistema.
 
   // Estados para o formulário
   const [showForm, setShowForm] = useState(false);
@@ -385,12 +373,8 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Verificação extra de deadline antes de submeter
-    if (new Date() >= DEADLINE_UTC) {
-      setInscricoesEncerradas(true);
-      return;
-    }
+
+    // Verificação de deadline removida - sistema reaberto
 
     if (!validateForm()) {
       return;
@@ -452,7 +436,8 @@ function App() {
   };
 
   // ============================================
-  // TELA DE INSCRIÇÕES ENCERRADAS (após 11/05/2026)
+  // TELA DE INSCRIÇÕES ENCERRADAS - DESATIVADA
+  // Sistema reaberto. Bloco mantido comentado para reativação futura, se necessário.
   // ============================================
   if (inscricoesEncerradas) {
     return (
