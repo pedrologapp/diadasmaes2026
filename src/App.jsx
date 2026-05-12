@@ -697,7 +697,7 @@ function App() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-center font-semibold text-pink-700" translate="no">
-                  Até 11/05/2026
+                  Até 12/05/2026
                 </p>
                 <p className="text-xs text-center text-muted-foreground mt-1">
                   Após essa data não receberemos pagamentos
